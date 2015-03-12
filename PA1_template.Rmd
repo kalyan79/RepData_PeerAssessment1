@@ -1,25 +1,86 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Activity Monitoring"
+author: "Kalyan"
+date: "Wednesday, March 11, 2015"
+output: html_document
 ---
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+<hr>
+<h4>Mean total number of steps taken per day</h4>
+```{r fig.path="figure/"}
+options(scipen=999)
+unzip("activity.zip")
+activity_data <- read.csv("activity.csv")
+activity <- na.omit(activity_data)
+activity_steps <- aggregate(activity$steps,by=list(activity$date),
+                            FUN=sum,na.rm=T)
+names(activity_steps) <- c('date','steps')
+hist(activity_steps$steps, breaks=20,xlab="No of steps",main="Total 
+     number steps per day",col="lightblue")
 
+mn <- round(mean(activity_steps$steps),digits=0)
+md <- round(median(activity_steps$steps),digits=0)
 
-## Loading and preprocessing the data
+```
+<b>The Mean of the total number of steps taken per day: `r mn`</b>
 
+<b>The Median of the total number of steps taken per day:  `r md`</b>
+<hr>
+<h4>Average daily activity pattern</h4>
+```{r fig.path="figure/"}
+activity_steps_avg <- aggregate(activity$steps,by=list(activity$interval),
+    			FUN=mean,na.rm=T)
+names(activity_steps_avg) <- c('interval','steps')
+plot(activity_steps_avg$interval,activity_steps_avg$steps, type="l", 
+		xlab= 'Interval',ylab='Avg. steps taken',
+		main='Average steps taken across all days')
 
+maxs <- activity_steps_avg[which.max(activity_steps_avg[,2]),]$interval
+```
+<b>Maximum number of steps taken at :`r maxs`  (5 minute interval)</b>
+<hr>
+<h4>Imputing missing values</h4>
+```{r}
+mis_activity <- activity_data[!complete.cases(activity_data),]
+nr <- nrow(mis_activity)
+```
+<b>Total number of missing values in the dataset is : `r nr` </b>
 
-## What is mean total number of steps taken per day?
+<i>Missing Value Strategy : Mean value for 5 minute intervals across all the day will be taken and assigned to the corresponding 5 minute interval with NA</i>
 
+```{r fig.path="figure/"}
+mis_activity <- merge(mis_activity,activity_steps_avg,by.x='interval',
+                      by.y='interval')
+mis_activity$steps.x <- NULL
+names(mis_activity) <- c("interval","date","steps")
+mis_activity <- mis_activity[c(3,2,1)]
+final <- rbind(activity,mis_activity)
 
+activity_steps_mis <- aggregate(final$steps,by=list(final$date),FUN=sum,na.rm=T)
+names(activity_steps_mis) <- c('date','steps')
+hist(activity_steps_mis$steps, breaks=20,xlab="No of steps",
+     main="Total number steps With
+    Adjusted missing value",col="lightblue")
 
-## What is the average daily activity pattern?
+mn <- round(mean(activity_steps_mis$steps),digits=0)
+md <- round(median(activity_steps_mis$steps),digits=0)
+```
+<b>The Mean of the total number of steps taken per day: `r mn`</b>
 
+<b>The Median of the total number of steps taken per day:  `r md`</b>
+<hr>
+<h4>Activity patterns between weekdays and weekends</h4>
+```{r fig.path="figure/"}
+library(lattice)
+final$weekday <- weekdays(as.Date(final$date))
+final$weekday <- gsub('Saturday|Sunday','Weekend',final$weekday)
+final$weekday <- gsub('Monday|Tuesday|Wednesday|Thursday|Friday',
+    				'Weekday',final$weekday)
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+activity_steps_avg <- aggregate(final$steps,by=list(final$interval,
+						final$weekday),FUN=mean,na.rm=T)
+names(activity_steps_avg) <- c('interval','weekday','steps')
+xyplot(steps~interval|factor(weekday),data=activity_steps_avg,layout=c(1,2),
+			type="l", xlab="Interval",ylab="Number of Steps",
+			main ="Acitvity comparision between weekday and Weekend", col="Brown")
+```
